@@ -1,0 +1,130 @@
+# =============================================================
+# DASHBOARD DEVELOPMENT PROJECT - DATA ANALYTICS DASHBOARD
+# =============================================================
+
+import dash
+from dash import html, dcc, Input, Output
+import pandas as pd
+import plotly.express as px
+from sklearn.linear_model import LinearRegression
+import numpy as np
+
+# -------------------------------------------------------------
+# 1. LOAD DATA
+# -------------------------------------------------------------
+df = pd.read_csv("data.csv")
+
+# -------------------------------------------------------------
+# 2. TRAIN A SIMPLE MODEL (for demo)
+# -------------------------------------------------------------
+model = LinearRegression()
+X = df[['Year']]
+y = df['Sales']
+model.fit(X, y)
+
+# Predict next year’s sales
+next_year = np.array([[2025]])
+predicted_sales = model.predict(next_year)[0]
+
+# -------------------------------------------------------------
+# 3. INITIALIZE DASH APP
+# -------------------------------------------------------------
+app = dash.Dash(_name_)
+app.title = "Business Analytics Dashboard"
+
+# -------------------------------------------------------------
+# 4. APP LAYOUT
+# -------------------------------------------------------------
+app.layout = html.Div(
+    style={
+        'fontFamily': 'Arial',
+        'margin': '0 auto',
+        'padding': '20px',
+        'maxWidth': '1000px',
+        'backgroundColor': '#f9f9f9',
+    },
+    children=[
+        html.H1("📊 Business Performance Dashboard", style={'textAlign': 'center'}),
+        html.Hr(),
+
+        # Dropdown to select region
+        html.Div([
+            html.Label("Select Region:", style={'fontWeight': 'bold'}),
+            dcc.Dropdown(
+                id='region-dropdown',
+                options=[{'label': region, 'value': region} for region in df['Region'].unique()],
+                value='East',
+                clearable=False,
+                style={'width': '300px'}
+            )
+        ], style={'marginBottom': '20px'}),
+
+        # Row 1: Summary KPIs
+        html.Div([
+            html.Div(id='total-sales', style={'width': '30%', 'display': 'inline-block', 'padding': '10px'}),
+            html.Div(id='total-profit', style={'width': '30%', 'display': 'inline-block', 'padding': '10px'}),
+            html.Div(id='predicted-sales', style={'width': '30%', 'display': 'inline-block', 'padding': '10px'})
+        ], style={'textAlign': 'center'}),
+
+        html.Hr(),
+
+        # Row 2: Graphs
+        html.Div([
+            dcc.Graph(id='sales-trend', style={'width': '48%', 'display': 'inline-block'}),
+            dcc.Graph(id='profit-trend', style={'width': '48%', 'display': 'inline-block'}),
+        ]),
+
+        html.Hr(),
+        html.Div("© 2025 Predictive Analytics Dashboard", style={'textAlign': 'center', 'color': 'gray'})
+    ]
+)
+
+# -------------------------------------------------------------
+# 5. CALLBACKS - INTERACTIVITY
+# -------------------------------------------------------------
+@app.callback(
+    [Output('sales-trend', 'figure'),
+     Output('profit-trend', 'figure'),
+     Output('total-sales', 'children'),
+     Output('total-profit', 'children'),
+     Output('predicted-sales', 'children')],
+    [Input('region-dropdown', 'value')]
+)
+def update_dashboard(selected_region):
+    # Filter by region
+    filtered = df[df['Region'] == selected_region]
+
+    # Figures
+    fig_sales = px.bar(filtered, x='Year', y='Sales', title=f"Sales Trend - {selected_region}",
+                       text_auto=True, color='Sales', color_continuous_scale='Blues')
+
+    fig_profit = px.line(filtered, x='Year', y='Profit', title=f"Profit Trend - {selected_region}",
+                         markers=True)
+
+    # KPI cards
+    total_sales = filtered['Sales'].sum()
+    total_profit = filtered['Profit'].sum()
+
+    kpi_sales = html.Div([
+        html.H3("💰 Total Sales"),
+        html.H2(f"${total_sales:,.0f}")
+    ], style={'backgroundColor': '#e3f2fd', 'borderRadius': '10px'})
+
+    kpi_profit = html.Div([
+        html.H3("📈 Total Profit"),
+        html.H2(f"${total_profit:,.0f}")
+    ], style={'backgroundColor': '#e8f5e9', 'borderRadius': '10px'})
+
+    kpi_prediction = html.Div([
+        html.H3("🔮 Predicted Sales (2025)"),
+        html.H2(f"${predicted_sales:,.0f}")
+    ], style={'backgroundColor': '#fff3e0', 'borderRadius': '10px'})
+
+    return fig_sales, fig_profit, kpi_sales, kpi_profit, kpi_prediction
+
+
+# -------------------------------------------------------------
+# 6. RUN APP
+# -------------------------------------------------------------
+if _name_ == '_main_':
+    app.run_server(debug=True, port=8050)
