@@ -1,0 +1,52 @@
+from pyspark.sql import SparkSession
+
+# 1. Initialize a Spark Session
+# This is the entry point to any Spark functionality.
+# .appName() gives your application a name in the Spark UI.
+# .getOrCreate() will create a new SparkSession if one doesn't exist,
+# or return the existing one.
+spark = SparkSession.builder \
+    .appName("BigDataAnalysis_Task1_InitialCount") \
+    .getOrCreate()
+
+print("Spark Session created successfully.")
+
+# --- Configuration for data loading ---
+# NOTE: Replace 'path/to/your/large_dataset.csv' with the actual path
+# to the large dataset you are working with.
+data_path = "path/to/your/large_dataset.csv" 
+header_option = "true"  # Set to "true" if your CSV has a header row
+infer_schema_option = "true" # Set to "true" to let Spark infer data types
+
+# 2. Load the Large Dataset
+try:
+    df = spark.read.csv(
+        data_path,
+        header=header_option,
+        inferSchema=infer_schema_option
+    )
+
+    print(f"\nSuccessfully loaded the dataset from: {data_path}")
+    print("--- Data Schema ---")
+    df.printSchema()
+
+    # 3. Perform a Basic Analysis (Demonstrating Scalability)
+    # The 'count()' action forces Spark to process the entire dataset,
+    # demonstrating its distributed processing capability.
+    row_count = df.count()
+
+    print("\n--- Analysis Result ---")
+    print(f"Total number of records in the dataset: {row_count}")
+    
+    # 4. Show a sample of the data (e.g., first 5 rows)
+    print("\n--- Sample Data ---")
+    df.show(5)
+
+except Exception as e:
+    print(f"\nAn error occurred during data loading or processing: {e}")
+
+finally:
+    # 5. Stop the Spark Session
+    # It's important to stop the session to release resources.
+    spark.stop()
+    print("\nSpark Session stopped.")
