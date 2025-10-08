@@ -1,0 +1,138 @@
+# =============================================================
+# SENTIMENT ANALYSIS DASHBOARD (ALL-IN-ONE PROJECT)
+# Author: ChatGPT (GPT-5)
+# =============================================================
+
+import pandas as pd
+import joblib
+import streamlit as st
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, classification_report
+
+# -------------------------------------------------------------
+# 1️⃣ SAMPLE DATASET (you can replace this with your own CSV)
+# -------------------------------------------------------------
+data = {
+    "text": [
+        "I love this product! It's amazing.",
+        "This is the worst thing ever.",
+        "It’s okay, not too bad.",
+        "Absolutely fantastic service.",
+        "Terrible experience, I hate it.",
+        "I’m happy with the result.",
+        "It didn’t work as expected.",
+        "Nothing special, just average.",
+        "Really good value for the money.",
+        "I will never buy this again.",
+        "The design is nice and sleek.",
+        "Horrible customer support.",
+        "I feel neutral about this.",
+        "Exceeded my expectations!",
+        "Disappointing and overpriced.",
+    ],
+    "sentiment": [
+        "positive",
+        "negative",
+        "neutral",
+        "positive",
+        "negative",
+        "positive",
+        "negative",
+        "neutral",
+        "positive",
+        "negative",
+        "positive",
+        "negative",
+        "neutral",
+        "positive",
+        "negative",
+    ],
+}
+
+df = pd.DataFrame(data)
+
+# -------------------------------------------------------------
+# 2️⃣ MODEL TRAINING (runs automatically when app starts)
+# -------------------------------------------------------------
+X = df["text"]
+y = df["sentiment"]
+
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Text Vectorization
+vectorizer = TfidfVectorizer(stop_words="english")
+X_train_vec = vectorizer.fit_transform(X_train)
+X_test_vec = vectorizer.transform(X_test)
+
+# Train Model
+model = MultinomialNB()
+model.fit(X_train_vec, y_train)
+
+# Evaluate
+y_pred = model.predict(X_test_vec)
+acc = accuracy_score(y_test, y_pred)
+
+# -------------------------------------------------------------
+# 3️⃣ STREAMLIT DASHBOARD
+# -------------------------------------------------------------
+st.set_page_config(page_title="Sentiment Analysis App", page_icon="💬", layout="centered")
+
+st.title("💬 Sentiment Analysis Dashboard")
+st.markdown("Type a review, comment, or sentence below to analyze its *sentiment* (Positive / Negative / Neutral).")
+
+st.write(f"📊 Model trained accuracy: *{acc*100:.2f}%*")
+
+# Text input area
+user_input = st.text_area("Enter text for sentiment analysis:", height=150, placeholder="e.g. I love this app!")
+
+# Predict sentiment
+if st.button("Analyze Sentiment"):
+    if user_input.strip():
+        input_vector = vectorizer.transform([user_input])
+        prediction = model.predict(input_vector)[0]
+
+        if prediction == "positive":
+            st.success("✅ Sentiment: Positive 😄")
+        elif prediction == "negative":
+            st.error("❌ Sentiment: Negative 😡")
+        else:
+            st.info("😐 Sentiment: Neutral")
+    else:
+        st.warning("⚠ Please enter some text.")
+
+st.markdown("---")
+
+# -------------------------------------------------------------
+# 4️⃣ OPTIONAL: UPLOAD CSV FOR BATCH ANALYSIS
+# -------------------------------------------------------------
+st.subheader("📂 Batch Sentiment Analysis (Upload CSV)")
+uploaded_file = st.file_uploader("Upload a CSV file with a 'text' column", type=["csv"])
+
+if uploaded_file:
+    try:
+        df_uploaded = pd.read_csv(uploaded_file)
+        if "text" not in df_uploaded.columns:
+            st.error("❌ The uploaded CSV must contain a column named 'text'.")
+        else:
+            df_uploaded["predicted_sentiment"] = model.predict(
+                vectorizer.transform(df_uploaded["text"])
+            )
+            st.write("✅ Sentiment predictions completed:")
+            st.dataframe(df_uploaded)
+
+            # Downloadable CSV
+            csv_data = df_uploaded.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="⬇ Download Results as CSV",
+                data=csv_data,
+                file_name="sentiment_results.csv",
+                mime="text/csv",
+            )
+    except Exception as e:
+        st.error(f"Error reading CSV: {e}")
+
+st.markdown("---")
+st.caption("Developed by ChatGPT (GPT-5) | © 2025 Sentiment Analysis Project")
